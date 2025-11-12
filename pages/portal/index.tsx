@@ -2,6 +2,7 @@ import { useState } from 'react'
 import PortalLayout from '../../components/PortalLayout'
 import BadgeDisplay, { ContributorCard } from '../../components/BadgeDisplay'
 import WalletConnect from '../../components/WalletConnect'
+import AttestationSystem from '../../components/AttestationSystem'
 import { TrendingUp, Users, Vote, BookOpen, Target, Award } from 'lucide-react'
 
 export default function PortalDashboard() {
@@ -67,6 +68,9 @@ export default function PortalDashboard() {
             </div>
           ))}
         </div>
+
+        {/* Attestation System */}
+        <AttestationSystem />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Learning Path */}
