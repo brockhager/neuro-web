@@ -29,6 +29,9 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
               <Link href="/portal/community" className="text-gray-700 dark:text-gray-300 hover:text-neuro-primary px-3 py-2 rounded-md text-sm font-medium">
                 Community
               </Link>
+              <Link href="/portal/search" className="text-gray-700 dark:text-gray-300 hover:text-neuro-primary px-3 py-2 rounded-md text-sm font-medium">
+                Search
+              </Link>
               <Link href="/portal/governance" className="text-gray-700 dark:text-gray-300 hover:text-neuro-primary px-3 py-2 rounded-md text-sm font-medium">
                 Governance
               </Link>
