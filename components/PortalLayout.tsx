@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
-import { Brain, Users, BookOpen, Trophy, Search, Settings } from 'lucide-react'
+import { Brain, Users, BookOpen, Trophy, Search, Settings, Activity } from 'lucide-react'
 
 interface PortalLayoutProps {
   children: ReactNode
@@ -31,6 +31,9 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
               </Link>
               <Link href="/portal/search" className="text-gray-700 dark:text-gray-300 hover:text-neuro-primary px-3 py-2 rounded-md text-sm font-medium">
                 Search
+              </Link>
+              <Link href="/portal/observability" className="text-gray-700 dark:text-gray-300 hover:text-neuro-primary px-3 py-2 rounded-md text-sm font-medium">
+                Observability
               </Link>
               <Link href="/portal/governance" className="text-gray-700 dark:text-gray-300 hover:text-neuro-primary px-3 py-2 rounded-md text-sm font-medium">
                 Governance
