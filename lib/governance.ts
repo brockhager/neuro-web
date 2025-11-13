@@ -4,8 +4,6 @@ import { Connection, PublicKey, Transaction, SystemProgram, sendAndConfirmTransa
 import { useWallet } from '@solana/wallet-adapter-react'
 import { badgeIncentivesService } from './badge-incentives'
 import { transparencyLogger } from './transparency-logger'
-import fs from 'fs'
-import path from 'path'
 
 // Governance Program ID (placeholder - would be deployed program)
 const GOVERNANCE_PROGRAM_ID = new PublicKey('GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw')
@@ -56,26 +54,34 @@ export class GovernanceService {
     try {
       // In production, this would be loaded from a database or blockchain
       // For now, we'll load from the bootstrap file if it exists
-      const bootstrapPath = path.join(process.cwd(), '..', 'neuroswarm', 'data', 'bootstrap-proposals.json')
+      if (typeof window === 'undefined') {
+        // Server-side only
+        const fs = require('fs');
+        const path = require('path');
+        const bootstrapPath = path.join(process.cwd(), '..', 'neuroswarm', 'data', 'bootstrap-proposals.json');
 
-      if (typeof window === 'undefined' && fs.existsSync(bootstrapPath)) {
-        const data = fs.readFileSync(bootstrapPath, 'utf8')
-        const rawProposals = JSON.parse(data)
+        if (fs.existsSync(bootstrapPath)) {
+          const data = fs.readFileSync(bootstrapPath, 'utf8');
+          const rawProposals = JSON.parse(data);
 
-        this.proposals = rawProposals.map((p: any) => ({
-          ...p,
-          author: typeof p.author === 'string' ? p.author : new PublicKey(p.author),
-          createdAt: new Date(p.createdAt),
-          votingEndsAt: new Date(p.votingEndsAt),
-          discussionEndsAt: p.discussionEndsAt ? new Date(p.discussionEndsAt) : undefined
-        }))
+          this.proposals = rawProposals.map((p: any) => ({
+            ...p,
+            author: typeof p.author === 'string' ? p.author : new PublicKey(p.author),
+            createdAt: new Date(p.createdAt),
+            votingEndsAt: new Date(p.votingEndsAt),
+            discussionEndsAt: p.discussionEndsAt ? new Date(p.discussionEndsAt) : undefined
+          }));
+        } else {
+          // Fallback to mock data if file doesn't exist
+          this.proposals = this.getMockProposals();
+        }
       } else {
-        // Fallback to mock data for client-side or if file doesn't exist
-        this.proposals = this.getMockProposals()
+        // Client-side fallback to mock data
+        this.proposals = this.getMockProposals();
       }
     } catch (error) {
-      console.warn('Failed to load bootstrap proposals, using mock data:', error)
-      this.proposals = this.getMockProposals()
+      console.warn('Failed to load bootstrap proposals, using mock data:', error);
+      this.proposals = this.getMockProposals();
     }
   }
 
@@ -92,7 +98,7 @@ export class GovernanceService {
         votingEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
         status: 'active',
         votes: { yes: 234, no: 67, abstain: 12 },
-        documentationLinks: ['https://docs.neuroswarm.ai/nn-optimization'],
+        documentationLinks: ['https://getblockchain.tech/neuroswarm/docs/nn-optimization'],
         tags: ['technical', 'performance', 'neural-networks']
       },
       {
@@ -105,7 +111,7 @@ export class GovernanceService {
         votingEndsAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
         status: 'active',
         votes: { yes: 189, no: 23, abstain: 45 },
-        documentationLinks: ['https://docs.neuroswarm.ai/governance-framework'],
+        documentationLinks: ['https://getblockchain.tech/neuroswarm/docs/governance-framework'],
         tags: ['governance', 'community', 'framework']
       }
     ]

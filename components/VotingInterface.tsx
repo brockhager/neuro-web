@@ -116,7 +116,7 @@ const VotingInterface: React.FC<VotingInterfaceProps> = ({
 
       onVoteSubmitted?.(proposal.id, selectedVote, userVotingPower);
       setHasVoted(true);
-      alert(`Vote submitted successfully to Solana! Transaction: ${signature.slice(0, 8)}...`);
+      alert(`Vote submitted successfully to Solana! Transaction: ${signature.signature.slice(0, 8)}...`);
     } catch (error) {
       console.error('Failed to submit vote:', error);
       alert('Failed to submit vote. Please try again.');

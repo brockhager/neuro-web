@@ -51,11 +51,11 @@ const GovernanceFeed: React.FC<GovernanceFeedProps> = ({
             description: p.description,
             category: p.category,
             proposer: p.author.toString(),
-            timestamp: p.createdAt.toISOString(),
+            timestamp: typeof p.createdAt === 'string' ? p.createdAt : p.createdAt.toISOString(),
             status: p.status === 'cancelled' ? 'expired' : p.status,
             votes: p.votes,
             voters: [], // Would need to be fetched separately
-            votingPeriod: Math.ceil((p.votingEndsAt.getTime() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
+            votingPeriod: Math.ceil(((typeof p.votingEndsAt === 'string' ? new Date(p.votingEndsAt) : p.votingEndsAt).getTime() - (typeof p.createdAt === 'string' ? new Date(p.createdAt) : p.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
             quorum: 50, // Default quorum
             totalVotingPower: 100 // Would need to be calculated
           }));
