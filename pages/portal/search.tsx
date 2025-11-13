@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PortalLayout from '../../components/PortalLayout';
 import { Brain, Search, FileText, Users, BookOpen, Filter, ExternalLink } from 'lucide-react';
 
@@ -20,7 +20,7 @@ const SearchDiscovery: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
 
   // Mock search data - in a real implementation, this would come from an API
-  const mockResults: SearchResult[] = [
+  const mockResults: SearchResult[] = useMemo(() => [
     {
       id: '1',
       title: 'Validator Node Architecture',
@@ -71,7 +71,7 @@ const SearchDiscovery: React.FC = () => {
       lastUpdated: 'Active now',
       relevance: 0.78,
     },
-  ];
+  ], []);
 
   useEffect(() => {
     if (query.length > 2) {
@@ -89,7 +89,7 @@ const SearchDiscovery: React.FC = () => {
     } else {
       setResults([]);
     }
-  }, [query]);
+  }, [query, mockResults]);
 
   const filteredResults = activeFilter === 'all'
     ? results
@@ -182,7 +182,7 @@ const SearchDiscovery: React.FC = () => {
               <>
                 <div className="flex items-center justify-between">
                   <p className="text-gray-600 dark:text-gray-400">
-                    Found {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''} for "{query}"
+                    Found {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''} for &quot;{query}&quot;
                   </p>
                 </div>
                 <div className="space-y-4">

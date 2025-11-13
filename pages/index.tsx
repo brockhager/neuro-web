@@ -83,7 +83,7 @@ const Home: NextPage = () => {
               Decentralized
             </h3>
             <p className="text-gray-600 dark:text-gray-300">
-              No central authority controls the AI ecosystem - it's owned by the community.
+              No central authority controls the AI ecosystem - it&apos;s owned by the community.
             </p>
           </div>
         </div>

@@ -38,7 +38,7 @@ export default function PortalDashboard() {
             <div>
               <h1 className="text-2xl font-bold">Welcome back, Contributor!</h1>
               <p className="mt-2 text-neuro-light/90">
-                You're making great progress in the NeuroSwarm ecosystem.
+                You&apos;re making great progress in the NeuroSwarm ecosystem.
               </p>
             </div>
             <BadgeDisplay tier={userTier} size="lg" />

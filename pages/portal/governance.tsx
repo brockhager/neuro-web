@@ -101,7 +101,7 @@ const GovernancePage: React.FC = () => {
             </h1>
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Participate in NeuroSwarm's decentralized governance system
+            Participate in NeuroSwarm&apos;s decentralized governance system
           </p>
         </div>
 
@@ -367,7 +367,7 @@ const GovernancePage: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-lg">📊</span>
-                    <span className="text-sm">Track how your votes shape NeuroSwarm's future</span>
+                    <span className="text-sm">Track how your votes shape NeuroSwarm&apos;s future</span>
                   </div>
                 </div>
               </div>

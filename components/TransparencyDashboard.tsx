@@ -508,7 +508,7 @@ const TransparencyDashboard: React.FC<TransparencyDashboardProps> = ({
               <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mt-2"></div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-900 dark:text-white">
-                  <span className="font-medium">Proposal Created:</span> "Establish Core Development Working Group"
+                  <span className="font-medium">Proposal Created:</span> &quot;Establish Core Development Working Group&quot;
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   by NeuroSwarm Foundation • 2 hours ago • Technical
@@ -520,7 +520,7 @@ const TransparencyDashboard: React.FC<TransparencyDashboardProps> = ({
               <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-900 dark:text-white">
-                  <span className="font-medium">Vote Cast:</span> Yes on "Community Growth Strategy"
+                  <span className="font-medium">Vote Cast:</span> Yes on &quot;Community Growth Strategy&quot;
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   by 8xQ9...3kL • 45 minutes ago • 5 voting power • +12.5 NEURO reward
@@ -556,7 +556,7 @@ const TransparencyDashboard: React.FC<TransparencyDashboardProps> = ({
               <div className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full mt-2"></div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-900 dark:text-white">
-                  <span className="font-medium">Proposal Passed:</span> "Security Audit Program"
+                  <span className="font-medium">Proposal Passed:</span> &quot;Security Audit Program&quot;
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   67% approval • 234 total votes • Executing next week

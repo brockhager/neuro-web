@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { Shield, CheckCircle, AlertCircle, Loader } from 'lucide-react';
@@ -28,13 +28,7 @@ const AttestationSystem: React.FC<AttestationSystemProps> = ({
   // Mock Solana connection - in production, this would connect to actual Solana network
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-  useEffect(() => {
-    if (userAddress || publicKey) {
-      fetchAttestationData();
-    }
-  }, [userAddress, publicKey]);
-
-  const fetchAttestationData = async () => {
+  const fetchAttestationData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Mock API call - in production, this would query Solana program accounts
@@ -53,7 +47,13 @@ const AttestationSystem: React.FC<AttestationSystemProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [onAttestationUpdate]);
+
+  useEffect(() => {
+    if (userAddress || publicKey) {
+      fetchAttestationData();
+    }
+  }, [userAddress, publicKey, fetchAttestationData]);
 
   const submitAttestation = async (targetAddress: string, confidence: number) => {
     if (!publicKey) return;
