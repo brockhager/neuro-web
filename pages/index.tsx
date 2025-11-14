@@ -31,8 +31,14 @@ const Home: NextPage = () => {
               Enter Portal
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
-            <Link href="/docs/overview.md" className="btn-secondary flex items-center justify-center px-8 py-3 text-lg">
-              Learn More
+            <Link href="/community" className="btn-secondary flex items-center justify-center px-8 py-3 text-lg">
+              Community
+            </Link>
+            <Link href="/governance" className="btn-secondary flex items-center justify-center px-8 py-3 text-lg">
+              Governance
+            </Link>
+            <Link href="/learn" className="btn-secondary flex items-center justify-center px-8 py-3 text-lg">
+              Learn
             </Link>
           </div>
         </div>
