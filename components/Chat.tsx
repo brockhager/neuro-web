@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
-type ChatMessage = {
-  sender: string;
-  content: string;
-  timestamp?: string;
-  cid?: string;
-  txSignature?: string;
-};
+import type { ChatMessage } from '@neuroswarm/shared';
 
 export const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);

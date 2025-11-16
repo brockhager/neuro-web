@@ -10,6 +10,7 @@
     "test": "node tests/test-quorum-validation.ts"
   },
   "dependencies": {
+    "@neuroswarm/shared": "file:../neuro-shared",
     "next": "14.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
