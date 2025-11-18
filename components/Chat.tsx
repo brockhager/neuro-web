@@ -47,7 +47,7 @@ export const Chat: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 w-full sm:w-[60%] mx-auto min-w-[280px]">
       <h2 className="text-xl font-semibold mb-4">Neuro Chat</h2>
       <div className="border rounded p-4 h-64 overflow-auto bg-white" id="messages">
         {messages.map((m, i) => (
