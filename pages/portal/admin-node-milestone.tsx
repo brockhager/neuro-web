@@ -349,7 +349,7 @@ export default function AdminNodeMilestone() {
                 <p className="text-sm text-gray-600">Deployment procedures</p>
               </div>
             </a>
-            <a href="https://github.com/brockhager/neuro-infra/wiki/Contributor-Guide#admin-node-awareness" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+            <a href="https://github.com/brockhager/neuroswarm/wiki/Contributor-Guide#admin-node-awareness" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
               <ExternalLink className="w-5 h-5 text-blue-500" />
               <div>
                 <h3 className="font-semibold">Contributor Guide</h3>
