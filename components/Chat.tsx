@@ -1,10 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ChatMessage } from '@neuroswarm/shared';
+import { Send, Loader2, Settings } from 'lucide-react';
+import { MessageBubble } from './MessageBubble';
 
 export const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [token, setToken] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
   useEffect(() => {
     // load recent messages from gateway
@@ -24,46 +37,163 @@ export const Chat: React.FC = () => {
   }, [token]);
 
   const send = async () => {
-    if (!text) return;
-    const payload = { sender: 'web', content: text };
+    if (!text.trim() || isLoading) return;
+
+    const content = text.trim();
+    const payload = { sender: 'web', content };
+
     setText('');
     setMessages(prev => [...prev, payload]);
+    setIsLoading(true);
+
     try {
       const res = await fetch('/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(payload)
       });
+
       if (res.ok) {
         const data = await res.json();
         setMessages(prev => [...prev, data]);
       } else {
         const textErr = await res.text();
-        setMessages(prev => [...prev, { sender: 'system', content: `error: ${textErr}` } as ChatMessage]);
+        setMessages(prev => [...prev, { sender: 'system', content: `Error: ${textErr}` } as ChatMessage]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { sender: 'system', content: 'Network error' } as ChatMessage]);
+      setMessages(prev => [...prev, { sender: 'system', content: 'Network error. Please check your connection.' } as ChatMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password: 'password' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setToken(data.token);
+        setShowSettings(false);
+      }
+    } catch (e) {
+      console.error('Login failed', e);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
     }
   };
 
   return (
-    <div className="p-6 w-full sm:w-[60%] mx-auto min-w-[280px]">
-      <h2 className="text-xl font-semibold mb-4">Neuro Chat</h2>
-      <div className="border rounded p-4 h-64 overflow-auto bg-white" id="messages">
-        {messages.map((m, i) => (
-          <div key={i} className="mb-2">
-            <strong>{m.sender}:</strong> {m.content}
-            {m.cid ? <div className="text-xs text-gray-500">CID: {m.cid} {m.txSignature ? `| ${m.txSignature}` : ''}</div> : null}
+    <div className="flex flex-col h-[calc(100vh-100px)] max-w-4xl mx-auto bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+      {/* Logo */}
+      <div className="flex justify-center pt-6 pb-2 bg-white dark:bg-gray-900">
+        <img src="/icon.png" alt="NeuroSwarm" className="w-[300px] h-auto" />
+      </div>
+      
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-900 p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Neuro Chat</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Connected to Swarm Network</p>
+        </div>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-gray-100 dark:bg-gray-800 text-neuro-primary' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+        >
+          <Settings size={20} />
+        </button>
+      </div>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-b border-gray-200 dark:border-gray-800 animate-in slide-in-from-top-2">
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-xs font-medium text-gray-500">Authentication</label>
+            <button
+              onClick={handleLogin}
+              className="text-xs text-neuro-primary hover:underline font-medium"
+            >
+              Login as Demo User
+            </button>
           </div>
-        ))}
+          <div className="flex gap-2">
+            <input
+              className="flex-1 text-sm border rounded-md p-2 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-neuro-primary/20 outline-none"
+              placeholder="Paste your auth token here..."
+              value={token}
+              onChange={e => setToken(e.target.value)}
+            />
+            <button
+              className="px-3 py-1 text-xs border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => setToken('')}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-950 scroll-smooth">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
+            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-800 rounded-full mb-4 flex items-center justify-center">
+              <Send size={24} />
+            </div>
+            <p>Start a conversation with the swarm</p>
+          </div>
+        ) : (
+          messages.map((m, i) => (
+            <MessageBubble key={i} message={m} />
+          ))
+        )}
+
+        {isLoading && (
+          <div className="flex justify-start mb-4 animate-in fade-in slide-in-from-bottom-2">
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+              <Loader2 size={16} className="animate-spin text-neuro-primary" />
+              <span className="text-sm text-gray-500">Thinking...</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
-      <div className="mt-4 flex gap-2">
-        <input className="flex-1 border p-2 rounded" value={text} onChange={e => setText(e.target.value)} placeholder="Message..." />
-        <button className="px-4 py-2 bg-gray-800 text-white rounded" onClick={send}>Send</button>
-      </div>
-      <div className="mt-2 flex gap-2 items-center">
-        <input className="border p-2 rounded flex-1" placeholder="JWT Token (optional)" value={token} onChange={e => setToken(e.target.value)} />
-        <button className="px-3 py-1 border rounded" onClick={() => setToken('')}>Clear</button>
+
+      {/* Input Area */}
+      <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+        <div className="flex gap-2 items-end max-w-4xl mx-auto">
+          <textarea
+            className="flex-1 border border-gray-300 dark:border-gray-700 rounded-xl p-3 max-h-32 min-h-[50px] resize-none focus:ring-2 focus:ring-neuro-primary/20 focus:border-neuro-primary outline-none bg-transparent"
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your message..."
+            rows={1}
+          />
+          <button
+            className={`p-3 rounded-xl flex items-center justify-center transition-all ${text.trim() && !isLoading
+                ? 'bg-neuro-primary text-white shadow-lg hover:shadow-neuro-primary/25 hover:-translate-y-0.5'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            onClick={send}
+            disabled={!text.trim() || isLoading}
+          >
+            {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+          </button>
+        </div>
+        <div className="text-center mt-2">
+          <p className="text-[10px] text-gray-400">
+            AI responses are generated by decentralized nodes and verified on Solana.
+          </p>
+        </div>
       </div>
     </div>
   );
