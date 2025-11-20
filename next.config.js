@@ -9,6 +9,11 @@ const nextConfig = {
             },
         ]
     },
+    webpack: (config, { isServer }) => {
+        // Suppress case-sensitivity warnings on Windows
+        config.module.unsafeCache = false;
+        return config;
+    },
 }
 
 module.exports = nextConfig
