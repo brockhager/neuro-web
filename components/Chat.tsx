@@ -80,6 +80,16 @@ export const Chat: React.FC = () => {
   const fetchAdapterData = async (adapter: string, label: string, params: any = {}) => {
     if (isLoading) return;
 
+    // Check if user is authenticated
+    if (!token) {
+      setMessages(prev => [...prev, { 
+        sender: 'system', 
+        content: 'Please login first using "Login as Demo User" in the settings (⚙️ icon) to access Quick Actions.' 
+      }]);
+      setShowSettings(true);
+      return;
+    }
+
     setMessages(prev => [...prev, { sender: 'web', content: `Show me ${label}` }]);
     setIsLoading(true);
 
@@ -88,7 +98,7 @@ export const Chat: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ adapter, params })
       });
@@ -107,11 +117,24 @@ export const Chat: React.FC = () => {
           setMessages(prev => [...prev, { sender: 'system', content: `Failed to fetch ${label}.` }]);
         }
       } else {
-        setMessages(prev => [...prev, { sender: 'system', content: 'Error connecting to data service.' }]);
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        if (res.status === 401) {
+          setMessages(prev => [...prev, { 
+            sender: 'system', 
+            content: 'Authentication expired. Please login again using "Login as Demo User" in settings.' 
+          }]);
+          setToken('');
+          setShowSettings(true);
+        } else {
+          setMessages(prev => [...prev, { 
+            sender: 'system', 
+            content: `Error: ${errorData.error || 'Data service error'}. Make sure neuro-services is running on port 3007.` 
+          }]);
+        }
       }
     } catch (e) {
       console.error(e);
-      setMessages(prev => [...prev, { sender: 'system', content: 'Network error while fetching data.' }]);
+      setMessages(prev => [...prev, { sender: 'system', content: 'Network error while fetching data. Make sure neuro-services is running.' }]);
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +142,7 @@ export const Chat: React.FC = () => {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch('http://localhost:3001/auth/login', {
+      const res = await fetch('http://localhost:3007/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'admin', password: 'password' })
@@ -128,9 +151,14 @@ export const Chat: React.FC = () => {
         const data = await res.json();
         setToken(data.token);
         setShowSettings(false);
+        setMessages(prev => [...prev, { sender: 'system', content: 'Successfully logged in as demo user!' }]);
+      } else {
+        const error = await res.text();
+        setMessages(prev => [...prev, { sender: 'system', content: `Login failed: ${error}` }]);
       }
     } catch (e) {
       console.error('Login failed', e);
+      setMessages(prev => [...prev, { sender: 'system', content: 'Login failed: Could not connect to auth service. Make sure neuro-services is running on port 3007.' }]);
     }
   };
 
