@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { ChatMessage } from '@neuroswarm/shared';
-import { Send, Loader2, Settings, Trophy, CloudSun, Newspaper, Globe } from 'lucide-react';
+import { Send, Loader2, Settings, Trophy, CloudSun, Newspaper, Globe, Search } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ScoreCard } from './ScoreCard';
 import { WeatherCard } from './WeatherCard';
@@ -344,6 +344,20 @@ export const Chat: React.FC = () => {
               <Globe size={14} />
             </div>
             <span>Global News</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const query = prompt('What would you like to search for?');
+              if (query) fetchAdapterData('duckduckgo-search', `search results for "${query}"`, { query });
+            }}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 hover:border-indigo-200 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 transition-all text-left group shadow-sm"
+          >
+            <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-md group-hover:bg-indigo-200 transition-colors">
+              <Search size={14} />
+            </div>
+            <span>Web Search</span>
           </button>
         </div>
 
