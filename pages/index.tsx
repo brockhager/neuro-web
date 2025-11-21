@@ -1,7 +1,7 @@
 import type { NextPage } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
-import { ArrowRight, Brain, Users, Shield, Zap } from 'lucide-react'
+import { ArrowRight, Brain, Users, Shield, Zap, MessageCircle } from 'lucide-react'
 
 const Home: NextPage = () => {
   return (
@@ -27,7 +27,11 @@ const Home: NextPage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link href="/portal" className="btn-primary flex items-center justify-center px-8 py-3 text-lg">
+            <Link href="/chat" className="btn-primary flex items-center justify-center px-8 py-3 text-lg">
+              <MessageCircle className="mr-2 h-5 w-5" />
+              Chat
+            </Link>
+            <Link href="/portal" className="btn-secondary flex items-center justify-center px-8 py-3 text-lg">
               Enter Portal
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
