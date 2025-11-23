@@ -17,9 +17,34 @@ export const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ExtendedMessage[]>([]);
   const [text, setText] = useState('');
   const [token, setToken] = useState('');
+  const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Decode JWT to get username
+  const decodeToken = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      return payload.username || 'user';
+    } catch (e) {
+      return 'user';
+    }
+  };
+
+  // Update username when token changes
+  useEffect(() => {
+    if (token) {
+      setUsername(decodeToken(token));
+    } else {
+      setUsername('');
+    }
+  }, [token]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -82,9 +107,9 @@ export const Chat: React.FC = () => {
 
     // Check if user is authenticated
     if (!token) {
-      setMessages(prev => [...prev, { 
-        sender: 'system', 
-        content: 'Please login first using "Login as Demo User" in the settings (⚙️ icon) to access Quick Actions.' 
+      setMessages(prev => [...prev, {
+        sender: 'system',
+        content: 'Please login first using "Login as Demo User" in the settings (⚙️ icon) to access Quick Actions.'
       }]);
       setShowSettings(true);
       return;
@@ -119,16 +144,16 @@ export const Chat: React.FC = () => {
       } else {
         const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
         if (res.status === 401) {
-          setMessages(prev => [...prev, { 
-            sender: 'system', 
-            content: 'Authentication expired. Please login again using "Login as Demo User" in settings.' 
+          setMessages(prev => [...prev, {
+            sender: 'system',
+            content: 'Authentication expired. Please login again using "Login as Demo User" in settings.'
           }]);
           setToken('');
           setShowSettings(true);
         } else {
-          setMessages(prev => [...prev, { 
-            sender: 'system', 
-            content: `Error: ${errorData.error || 'Data service error'}. Make sure neuro-services is running on port 3007.` 
+          setMessages(prev => [...prev, {
+            sender: 'system',
+            content: `Error: ${errorData.error || 'Data service error'}. Make sure neuro-services is running on port 3007.`
           }]);
         }
       }
@@ -180,12 +205,20 @@ export const Chat: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Neuro Chat</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">Connected to Swarm Network</p>
           </div>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-gray-100 dark:bg-gray-800 text-neuro-primary' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-          >
-            <Settings size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            {token && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs font-medium text-green-700 dark:text-green-400">{username}</span>
+              </div>
+            )}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-gray-100 dark:bg-gray-800 text-neuro-primary' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+            >
+              <Settings size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Settings Panel */}

@@ -7,6 +7,10 @@ const nextConfig = {
                 source: '/v1/:path*',
                 destination: 'http://localhost:3007/v1/:path*',
             },
+            {
+                source: '/auth/:path*',
+                destination: 'http://localhost:3007/auth/:path*',
+            },
         ]
     },
     webpack: (config, { isServer }) => {
