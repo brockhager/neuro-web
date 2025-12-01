@@ -26,7 +26,7 @@ const Home: NextPage = () => {
             Every AI interaction is verifiable, transparent, and cryptographically attested on Solana.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link href="/chat" className="btn-primary flex items-center justify-center px-8 py-3 text-lg">
               <MessageCircle className="mr-2 h-5 w-5" />
               Chat
@@ -34,6 +34,9 @@ const Home: NextPage = () => {
             <Link href="/portal" className="btn-secondary flex items-center justify-center px-8 py-3 text-lg">
               Enter Portal
               <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+            <Link href="/ops-hub" className="btn-accent flex items-center justify-center px-8 py-3 text-lg">
+              Operations Hub
             </Link>
             <Link href="/community" className="btn-secondary flex items-center justify-center px-8 py-3 text-lg">
               Community
