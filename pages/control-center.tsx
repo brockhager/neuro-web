@@ -65,8 +65,8 @@ const MODULES: ModuleDef[] = [
   { id: 'JobTracking', title: 'Job Tracking Dashboard', icon: ListTodo, description: 'Submit new jobs and monitor the status of active requests.', requiredRole: 'User' },
   { id: 'Reconciliation', title: 'Reconciliation Dashboard', icon: BarChart3, description: 'Monitor critical financial reconciliation metrics and system alerts.', requiredRole: 'Admin' },
   { id: 'Validator', title: 'Validator Dashboard', icon: Cpu, description: 'View assigned job queues, current stake status, and performance reputation.', requiredRole: 'Validator' },
-  // Adding a general system status dashboard
   { id: 'SystemStatus', title: 'System Status', icon: SlidersHorizontal, description: 'Overall health and configuration of the NeuroSwarm cluster.', requiredRole: 'Guest' },
+  { id: 'MonitorDashboard', title: 'Monitor Dashboard', icon: Activity, description: 'Legacy monitoring dashboard with real-time node status and network health.', requiredRole: 'Guest' },
 ];
 
 // --- Metric Fetching Hook (Secured with JWT) ---
@@ -256,25 +256,6 @@ const ControlCenterView: React.FC<{ setView: (v: string) => void }> = ({ setView
     // Admins can see everything, others only see their required role module.
     return userRole === 'Admin' || userRole === module.requiredRole;
   };
-
-  return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight">NeuroSwarm Control Center</h1>
-      <p className="text-lg text-indigo-300 mb-12">Current Role: **{userRole}**. Select a dashboard to monitor or manage operations.</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {MODULES.map(module => (
-          <div key={module.id} className={!isModuleAccessible(module) ? 'opacity-40 cursor-not-allowed' : ''}>
-            <DashboardButton
-              title={module.title}
-              description={module.description}
-              icon={module.icon}
-              onClick={() => isModuleAccessible(module) ? setView(module.id) : null}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
   );
 };
 
