@@ -26,6 +26,7 @@ const getJwtForRole = (role: UserRole): string => {
 interface AuthContextType {
   userRole: UserRole;
   jwtToken: string;
+  shortToken?: string | null;
   setUserRole: (role: UserRole) => void;
 }
 
@@ -38,14 +39,55 @@ const AuthContext = createContext<AuthContextType>({
 const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole>('Admin');
   const [jwtToken, setJwtToken] = useState(getJwtForRole('Admin'));
+  const [shortToken, setShortToken] = useState<string | null>(null);
+  const [shortTokenExpiry, setShortTokenExpiry] = useState<number | null>(null);
+  const [shortTokenTimer, setShortTokenTimer] = useState<any>(null);
 
   const handleRoleChange = (newRole: UserRole) => {
     setUserRole(newRole);
     setJwtToken(getJwtForRole(newRole));
+    // Clear short token so it will be re-acquired for the new role
+    setShortToken(null);
+    setShortTokenExpiry(null);
+    if (shortTokenTimer) { clearTimeout(shortTokenTimer); setShortTokenTimer(null); }
   }
 
+  // Exchange long-lived token for a short-lived server-signed session token
+  const exchangeShortToken = useCallback(async (longToken: string) => {
+    try {
+      const r = await fetch('/api/auth/token-swap', { method: 'POST', headers: { Authorization: `Bearer ${longToken}` } });
+      if (!r.ok) {
+        console.warn('Short token swap failed', r.status);
+        return null;
+      }
+      const body = await r.json();
+      const token = body.token as string;
+      const expiresIn = body.expiresInSec as number || 300;
+      const expiry = Date.now() + (expiresIn * 1000);
+      setShortToken(token);
+      setShortTokenExpiry(expiry);
+
+      // Refresh timer -> refresh 30s before expiry, or at 90% of ttl
+      const refreshMs = Math.max(15000, expiresIn * 1000 * 0.9);
+      if (shortTokenTimer) clearTimeout(shortTokenTimer);
+      const t = setTimeout(() => exchangeShortToken(longToken), refreshMs);
+      setShortTokenTimer(t);
+
+      return token;
+    } catch (err) {
+      console.warn('Failed to fetch short token', err);
+      return null;
+    }
+  }, [shortTokenTimer]);
+
+  useEffect(() => {
+    // Immediately attempt to swap to a short token if we have a long token
+    if (jwtToken) exchangeShortToken(jwtToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shortToken]);
+
   return (
-    <AuthContext.Provider value={{ userRole, jwtToken, setUserRole: handleRoleChange }}>
+    <AuthContext.Provider value={{ userRole, jwtToken, shortToken, setUserRole: handleRoleChange }}>
       {children}
     </AuthContext.Provider>
   );
@@ -102,7 +144,7 @@ const parsePrometheusMetrics = (metricsText: string): MetricsData => {
 };
 
 const useLiveMetrics = () => {
-  const { userRole, jwtToken } = useContext(AuthContext);
+  const { userRole, shortToken } = useContext(AuthContext);
   const [metrics, setMetrics] = useState<MetricsData>({
     router_refund_retries_total: 0,
     router_refund_alerts_total: 0,
@@ -115,7 +157,7 @@ const useLiveMetrics = () => {
 
   const fetchMetrics = useCallback(async () => {
     // Only fetch for the Reconciliation Dashboard (Admin role)
-    if (userRole !== 'Admin' || !jwtToken) {
+    if (userRole !== 'Admin' || !shortToken) {
       setIsLoading(false);
       return;
     }
@@ -125,7 +167,7 @@ const useLiveMetrics = () => {
     try {
       const response = await fetch(METRICS_ENDPOINT, {
         headers: {
-          'Authorization': `Bearer ${jwtToken}`,
+          'Authorization': `Bearer ${shortToken}`,
         },
       });
 
@@ -152,16 +194,16 @@ const useLiveMetrics = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [userRole, jwtToken]);
+  }, [userRole, shortToken]);
 
   useEffect(() => {
-    if (userRole === 'Admin' && jwtToken) {
+    if (userRole === 'Admin' && shortToken) {
       fetchMetrics();
       const interval = setInterval(fetchMetrics, POLLING_INTERVAL_MS);
       return () => clearInterval(interval);
     }
     return () => { };
-  }, [fetchMetrics, userRole, jwtToken]);
+  }, [fetchMetrics, userRole, shortToken]);
 
   return { metrics, isLoading, error };
 };
@@ -249,7 +291,7 @@ const PermissionDenied: React.FC<{ requiredRole: string }> = ({ requiredRole }) 
 
 // --- 2. The Main Control Center View (Launchpad) ---
 const ControlCenterView: React.FC<{ setView: (v: string) => void }> = ({ setView }) => {
-  const { userRole } = useContext(AuthContext);
+  const { userRole, shortToken } = useContext(AuthContext);
 
   const isModuleAccessible = (module: ModuleDef) => {
     if (module.requiredRole === 'Guest') return true; // System Status is open to all
@@ -323,6 +365,29 @@ const ReconciliationDashboard = () => {
   }
 
   const { metrics, isLoading, error } = useLiveMetrics();
+
+  // Firestore incidents (realtime-ish via short polling) — Admin-only
+  const [incidents, setIncidents] = useState<Array<any>>([]);
+  const fetchIncidents = useCallback(async () => {
+    try {
+      const res = await fetch('/api/firestore/incidents', { headers: { 'Authorization': `Bearer ${shortToken}` } });
+      if (res.ok) {
+        const json = await res.json();
+        setIncidents(json.items || []);
+      } else {
+        console.warn('Failed to fetch incidents', res.status);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch incidents', err);
+    }
+  }, [shortToken]);
+
+  useEffect(() => {
+    if (userRole !== 'Admin' || !shortToken) return;
+    fetchIncidents();
+    const i = setInterval(fetchIncidents, 3000);
+    return () => clearInterval(i);
+  }, [fetchIncidents, userRole, shortToken]);
 
   const alertCount = metrics.router_refund_alerts_total;
   const pendingUnsigned = metrics.unsigned_refunds_pending;
@@ -433,32 +498,154 @@ const ReconciliationDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Row 3: Incidents panel (Admin-only) */}
+      <div className="mt-8 p-6 bg-gray-800 rounded-xl border border-gray-700">
+        <h2 className="text-xl font-semibold text-white mb-4">Incidents (Realtime)</h2>
+        {userRole !== 'Admin' ? (
+          <p className="text-sm text-gray-400">Incidents are only visible to Admin users.</p>
+        ) : (
+          <div className="space-y-3 max-h-60 overflow-auto">
+            {incidents.length === 0 ? (
+              <p className="text-sm text-gray-400">No incidents recorded.</p>
+            ) : (
+              incidents.map((it: any) => (
+                <div key={it.id} className="p-3 bg-gray-900/70 border border-gray-700 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm font-semibold text-white">{it.alertname}</div>
+                      <div className="text-xs text-gray-400">{it.summary || 'No summary'}</div>
+                    </div>
+                    <div className="text-xs text-gray-300">{it.severity?.toUpperCase() || 'INFO'}</div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-400">Instance: {it.instance} • Last seen: {it.lastSeenAt ? new Date(it.lastSeenAt).toLocaleString() : 'N/A'}</div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
 // --- Job Tracking Dashboard (Formerly User View) ---
-const JobTrackingDashboard = () => (
-  <div className="p-8">
-    <h1 className="text-3xl font-bold text-white mb-6 flex items-center"><ListTodo className="w-6 h-6 mr-3 text-indigo-400" /> Job Tracking Dashboard</h1>
-    <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
-      <h2 className="text-2xl font-semibold text-white mb-4">New Job Submission</h2>
-      <div className="space-y-4">
-        <textarea
-          placeholder="Paste your compute manifest (JSON/YAML) here..."
-          rows={5}
-          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500"
-        />
-        <button className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition shadow-md">
-          Submit Decentralized Job
-        </button>
+const JobTrackingDashboard = () => {
+  const { userRole, shortToken } = useContext(AuthContext);
+  if (userRole !== 'User') return <PermissionDenied requiredRole="User" />;
+
+  // Form state
+  const [jobName, setJobName] = useState('Example Job');
+  const [model, setModel] = useState('gpt-4');
+  const [promptText, setPromptText] = useState('Describe the future of distributed AI');
+  const [maxTokens, setMaxTokens] = useState(256);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Pending jobs list (short-polling via server proxy)
+  const [pendingJobs, setPendingJobs] = useState<Array<any>>([]);
+
+  const fetchPendingJobs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/firestore/pending-jobs', { headers: { 'Authorization': `Bearer ${shortToken}` } });
+      if (!res.ok) return;
+      const json = await res.json();
+      setPendingJobs(json.items || []);
+    } catch (err) {
+      // ignore for now
+    }
+  }, [shortToken]);
+
+  useEffect(() => {
+    fetchPendingJobs();
+    const t = setInterval(fetchPendingJobs, 3000);
+    return () => clearInterval(t);
+  }, [fetchPendingJobs]);
+
+  const submitJob = async () => {
+    setSubmitting(true);
+    setMessage(null);
+    const body = {
+      user_wallet: 'demo-wallet-1',
+      prompt: promptText,
+      model,
+      max_tokens: maxTokens,
+      nsd_burned: '0',
+      burn_tx_signature: 'dev-burn-sig'
+    };
+
+    try {
+      const res = await fetch('/api/router/submit-job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${shortToken}` },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(`Submission failed: ${data?.error || res.statusText || 'unknown'}`);
+      } else {
+        setMessage(`Job submitted: ${data?.job_id || JSON.stringify(data)}`);
+        fetchPendingJobs();
+      }
+    } catch (err: any) {
+      setMessage(`Request error: ${err?.message || err}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold text-white mb-6 flex items-center"><ListTodo className="w-6 h-6 mr-3 text-indigo-400" /> Job Tracking Dashboard</h1>
+      <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
+        <h2 className="text-2xl font-semibold text-white mb-4">New Job Submission</h2>
+        <div className="space-y-4">
+          <input value={jobName} onChange={e => setJobName(e.target.value)} placeholder="Job name" className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input value={model} onChange={e => setModel(e.target.value)} placeholder="Model (e.g. gpt-4)" className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white" />
+            <input value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value || '0'))} placeholder="Max tokens" type="number" className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white" />
+            <input value={'demo-wallet-1'} disabled className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-400" />
+          </div>
+          <textarea value={promptText} onChange={(e) => setPromptText(e.target.value)} placeholder="Write the prompt for your decentralized job" rows={5} className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500" />
+          <div className="flex items-center space-x-3">
+            <button onClick={submitJob} disabled={submitting} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition shadow-md disabled:opacity-60">{submitting ? 'Submitting…' : 'Submit Decentralized Job'}</button>
+            {message && <div className="text-sm text-gray-300">{message}</div>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 bg-gray-800 p-6 rounded-xl shadow-lg">
+        <h2 className="text-xl font-semibold text-white mb-4">Pending Jobs (Live)</h2>
+        <div className="space-y-2 max-h-64 overflow-auto">
+          {pendingJobs.length === 0 ? (
+            <p className="text-sm text-gray-400">No pending jobs (waiting for Router/Validators).</p>
+          ) : (
+            pendingJobs.map((j: any) => (
+              <div key={j.id || j.documentId} className="p-3 bg-gray-900/70 border border-gray-700 rounded-md">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-sm font-semibold text-white">{j.job_name || j.prompt?.slice?.(0,60) || j.id}</div>
+                    <div className="text-xs text-gray-400">Model: {j.model || 'unknown'} • Wallet: {j.user_wallet || 'N/A'}</div>
+                  </div>
+                  <div className="text-xs text-gray-300">{j.status || 'pending'}</div>
+                </div>
+                <div className="mt-2 text-xs text-gray-400">Received: {j.received_at ? new Date(j.received_at).toLocaleString() : 'N/A'}</div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // --- Validator Dashboard (Formerly Validator View) ---
-const ValidatorDashboard = () => (
+const ValidatorDashboard = () => {
+  const { userRole } = useContext(AuthContext);
+  if (userRole !== 'Validator') return <PermissionDenied requiredRole="Validator" />;
+
+  return (
   <div className="p-8">
     <h1 className="text-3xl font-bold text-white mb-6 flex items-center"><Cpu className="w-6 h-6 mr-3 text-indigo-400" /> Validator Dashboard</h1>
     <p className="text-gray-400 mb-6">Monitoring the decentralized validator network health and operational metrics.</p>
@@ -471,7 +658,8 @@ const ValidatorDashboard = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // --- System Status Dashboard (New General View) ---
 const SystemStatusDashboard = () => (
