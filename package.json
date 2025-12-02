@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node tests/test-quorum-validation.ts"
+    "test": "ts-node --esm tests/test-quorum-validation.ts"
   },
   "dependencies": {
     "firebase-admin": "^11.11.0",
@@ -30,6 +30,7 @@
     "gray-matter": "^4.0.3"
   },
   "devDependencies": {
+  "ts-node": "^10.9.1",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
