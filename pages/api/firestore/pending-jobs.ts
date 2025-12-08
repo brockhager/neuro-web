@@ -11,13 +11,7 @@ const initFirestore = () => {
   }
 };
 
-import jwt from 'jsonwebtoken';
-
-const verifyShortToken = (token: string | undefined): any | null => {
-  if (!token) return null;
-  const SECRET = process.env.SHORT_TOKEN_SECRET || 'dev-short-secret-please-change';
-  try { return jwt.verify(token, SECRET); } catch (err) { return null; }
-};
+import { verifyShortToken } from '../../../lib/shortToken';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = (req.headers['authorization'] || '') as string;

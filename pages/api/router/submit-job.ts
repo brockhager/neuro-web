@@ -2,17 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 const ROUTER_API = process.env.ROUTER_API_URL || 'http://localhost:3000';
 
-import jwt from 'jsonwebtoken';
-
-const verifyShortToken = (token: string | undefined): any | null => {
-  if (!token) return null;
-  const SECRET = process.env.SHORT_TOKEN_SECRET || 'dev-short-secret-please-change';
-  try {
-    return jwt.verify(token, SECRET);
-  } catch (err) {
-    return null;
-  }
-};
+import { verifyShortToken } from '../../../lib/shortToken';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

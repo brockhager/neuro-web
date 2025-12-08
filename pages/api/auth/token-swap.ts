@@ -1,5 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import jwt from 'jsonwebtoken'
+// Small server-only JWT signing fallback (HMAC-SHA256) so the API works without the
+// external `jsonwebtoken` package during local/dev runs. This file runs on the
+// server (Next.js API route) so using Node's crypto is safe.
+import crypto from 'crypto'
 
 // Token swap: accept long-lived JWT (Bearer) and issue a short-lived session token
 // Short token is HMAC-signed using NEXT_PUBLIC_SHORT_TOKEN_SECRET (set on server as SHORT_TOKEN_SECRET)
@@ -35,14 +38,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Long-lived token expired' });
   }
 
-  // Issue short-lived token (signed by server secret)
+  // Issue short-lived token (signed by server secret). We implement a tiny
+  // JWT signer here so the API doesn't depend on the `jsonwebtoken` package.
   const shortPayload = {
     role: payload.role,
     sub: payload.sub || payload.user || 'local-dev',
     iat: Math.floor(Date.now() / 1000),
   };
 
-  const shortToken = jwt.sign(shortPayload, SECRET, { algorithm: 'HS256', expiresIn: TTL_SEC });
+  // Create a minimal JWT: base64url(header).base64url(payload).base64url(HMAC_SHA256)
+  const base64url = (input: string | Buffer) => {
+    const str = typeof input === 'string' ? Buffer.from(input, 'utf8').toString('base64') : Buffer.from(input).toString('base64');
+    return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  };
+
+  const signHMAC = (msg: string, secret: string) => {
+    return crypto.createHmac('sha256', secret).update(msg).digest();
+  };
+
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const payloadWithExpiry = { ...shortPayload, iat: now, exp: now + TTL_SEC };
+
+  const encodedHeader = base64url(JSON.stringify(header));
+  const encodedPayload = base64url(JSON.stringify(payloadWithExpiry));
+  const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+  const signature = base64url(signHMAC(unsignedToken, SECRET));
+  const shortToken = `${unsignedToken}.${signature}`;
 
   return res.status(200).json({ token: shortToken, expiresInSec: TTL_SEC });
 }
